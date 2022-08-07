@@ -6,16 +6,28 @@ from django.utils.translation import gettext_lazy as _
 
 
 from django.contrib.auth import get_user_model
+from django.urls import reverse
 from django.conf import settings
 
 from users.models import NewUser
 
+User = get_user_model()
+class Category(models.Model):
+    name = models.CharField(max_length=250)
 
-CATEGORY_CHOICES = (
-    ('A' , 'ACTION'),
-    ('D', 'DRAMA'),
-    ('R', 'ROMANCE')
-)
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse('category', args=(str(self.id)))
+
+
+CATEGORY_CHOICES = Category.objects.all().values_list('name', 'name')
+
+choice_list = []
+for item in CATEGORY_CHOICES:
+    choice_list.append(item)
+
 STATUS_CHOICES = (
     ('in_review','in review'),
     ('approved','approved')
@@ -24,12 +36,14 @@ STATUS_CHOICES = (
 class Movie(models.Model):
     title = models.CharField(max_length=20)
     description = models.TextField(max_length=100)
-    category =  models.CharField(choices=CATEGORY_CHOICES, max_length=1)
-    uploader = models.ForeignKey(NewUser, on_delete=models.CASCADE)
-    status = models.CharField(choices=CATEGORY_CHOICES, max_length=1)
-    movie_length = models.IntegerField()
-    likes = models.IntegerField(default=0)
-    dislikes = models.IntegerField(default=0)
+    movie = models.FileField(upload_to='movie/%y%m%d', null=True)
+    category =  models.TextField(choices=CATEGORY_CHOICES, max_length=150)
+    uploader = models.ForeignKey(User, on_delete=models.CASCADE)
+    movie_length = models.CharField(max_length=100, blank=True)
+    likes = models.ManyToManyField(User, related_name='movie_likes')
+
+    def total_likes(self):
+        return self.likes.count()
 
     def __str__(self):
         return self.title
